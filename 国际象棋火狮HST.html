@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国际象棋-火狮游戏</title>
+    <style>
+        body {
+            background-image: url('https://raw.githubusercontent.com/Xiaowameijiao/huoshibizhi.github.io/main/image.jpg');
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 2px solid #333;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            cursor: pointer;
+        }
+
+        .white {
+            background-color: #f0d9b5;
+        }
+
+        .black {
+            background-color: #b58863;
+        }
+
+        .selected {
+            border: 2px solid red;
+        }
+
+        #capturedPiecesContainer {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            margin-left: 20px;
+            border-radius: 5px;
+        }
+
+        #capturedPieces {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        #restartButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        #exitButton {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #008200;
+            color: white;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .fixed-text {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            color: #1AE5C9;
+            margin: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <p class="fixed-text">火狮 H.S.T.</p>
+    <button id="exitButton">退出游戏</button>
+    <div class="container">
+        <div id="chessboard"></div>
+        <div id="capturedPiecesContainer">
+            <div id="capturedPieces"; style="color: #008200">被吃掉的棋子:</div>
+        </div>
+    </div>
+    <button id="restartButton">重新开始</button>
+    <script>
+            const boardElement = document.getElementById('chessboard');
+        const capturedPiecesElement = document.getElementById('capturedPieces');
+        const restartButton = document.getElementById('restartButton');
+        const exitButton = document.getElementById('exitButton');
+        let initialBoard = [
+            ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
+            ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'],
+            ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']
+        ];
+        let capturedPieces = {
+            '♜': 0, '♞': 0, '♝': 0, '♛': 0, '♚': 0, '♟': 0,
+            '♙': 0, '♖': 0, '♘': 0, '♗': 0, '♕': 0, '♔': 0
+        };
+
+        function createChessboard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = document.createElement('div');
+                    square.classList.add('square');
+                    square.classList.add((i + j) % 2 === 0 ? 'white' : 'black');
+                    square.textContent = initialBoard[i][j];
+                    square.dataset.row = i;
+                    square.dataset.col = j;
+                    square.addEventListener('click', onSquareClick);
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        let selectedPiece = null;
+        let selectedSquare = null;
+
+        function onSquareClick(event) {
+            const clickedSquare = event.currentTarget;
+            const row = clickedSquare.dataset.row;
+            const col = clickedSquare.dataset.col;
+
+            if (selectedSquare === clickedSquare) {
+                selectedSquare.classList.remove('selected');
+                selectedPiece = null;
+                selectedSquare = null;
+                return;
+            }
+
+            if (selectedPiece) {
+                movePiece(clickedSquare, row, col);
+            } else {
+                selectPiece(clickedSquare, row, col);
+            }
+        }
+
+        function selectPiece(square, row, col) {
+            if (initialBoard[row][col]) {
+                selectedPiece = initialBoard[row][col];
+                selectedSquare = square;
+                square.classList.add('selected');
+            }
+        }
+
+        function movePiece(square, row, col) {
+            if (selectedPiece) {
+                const pieceAtDestination = initialBoard[row][col];
+                if (pieceAtDestination) {
+                    capturedPieces[pieceAtDestination]++;
+                    updateCapturedPieces();
+                }
+                initialBoard[selectedSquare.dataset.row][selectedSquare.dataset.col] = '';
+                initialBoard[row][col] = selectedPiece;
+                selectedSquare.classList.remove('selected');
+                selectedSquare.textContent = '';
+                square.textContent = selectedPiece;
+                selectedPiece = null;
+                selectedSquare = null;
+                checkForWin();
+            }
+        }
+
+        function updateCapturedPieces() {
+            let html = '被吃掉的棋子:<br>';
+            for (const piece in capturedPieces) {
+                if (capturedPieces[piece] > 0) {
+                    html += `${piece}: ${capturedPieces[piece]}<br>`;
+                }
+            }
+            capturedPiecesElement.innerHTML = html;
+        }
+
+        function checkForWin() {
+            if (capturedPieces['♔'] > 0) {
+                alert('黑方获得胜利!');
+            } else if (capturedPieces['♚'] > 0) {
+                alert('白方获得胜利!');
+            }
+        }
+
+        function resetGame() {
+            initialBoard = [
+                ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
+                ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'],
+                ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']
+            ];
+            capturedPieces = {
+                '♜': 0, '♞': 0, '♝': 0, '♛': 0, '♚': 0, '♟': 0,
+                '♙': 0, '♖': 0, '♘': 0, '♗': 0, '♕': 0, '♔': 0
+            };
+            createChessboard();
+            updateCapturedPieces();
+        }
+
+        restartButton.addEventListener('click', resetGame);
+        exitButton.addEventListener('click', () => {
+            history.back();
+        });
+
+        createChessboard();
+    </script>
+</body>
+</html>
